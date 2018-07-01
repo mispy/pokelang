@@ -1,20 +1,16 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
-import {observable, computed, action, autorun, reaction} from 'mobx'
 import {observer} from 'mobx-react'
-
-declare const require: any
-const pokemon = require('pokemon')
 
 declare const window: any
 
-
+import * as pokenames from './pokenames'
 
 @observer
-class Main extends React.Component<{}> {
+class Main extends React.Component {
     render() {
         return <div>
-            boop
+            {pokenames.en}
         </div>
     }
 }

@@ -1,61 +1,59 @@
 import * as React from 'react'
-import * as ReactDOMServer from 'react-dom/server'
+import * as ReactDOM from 'react-dom'
 import {Helmet, HelmetData} from 'react-helmet'
 import Homepage from './Homepage'
+import {observable, action, computed} from 'mobx'
+import {observer} from 'mobx-react'
+declare const require: any
+const wanakana = require('wanakana')
 
-declare var require: any
-const faviconImg = require('./favicon.png')
-const styles = require('./index.css')
+import * as pokenames from './pokenames'
+import './index.scss'
 
-class Body extends React.Component<{path: string, assets: string[]}> {
-    content() {
-        const {path} = this.props
-
-        if (path == "/") {
-            return <Homepage/>
-        }           
-    }
-
+class Pokemon extends React.Component<{ left: number, number: number }> {
     render() {
-        const {assets} = this.props
-        const js = assets.filter(value => value.match(/\.js$/))
-
-        return <body>
-            <Helmet title="Spire of the Path"/>
-            {js.map(path =>
-                <script src={'/'+path}/>  
-            )}
-            {this.content()}
-        </body>
+        const {left, number} = this.props
+        return <div className="pokemon walkin"/>
     }
 }
 
-class Head extends React.Component<{path: string, assets: string[], head: HelmetData}> {
+@observer
+class Main extends React.Component {
+    @observable pokeIndex: number = 134//Math.floor(Math.random()*pokenames.en.length)
+    @observable answer: string = ""
+    @observable validate: boolean = false
+    @observable windowWidth = window.innerWidth
+    @observable windowHeight = window.innerHeight
+
+    @action.bound onInput(e: React.FormEvent<HTMLInputElement>) {
+        this.answer = e.currentTarget.value
+    }
+
+    @action.bound onKeyPress(e: React.KeyboardEvent<HTMLInputElement>) {
+        if (e.key === "Enter") {
+            this.validate = true
+        }
+    }
+
+    @computed get isValid() {
+        return this.answer === wanakana.toRomaji(pokenames.ja[this.pokeIndex])
+    }
+
+    @computed get pokemonLeft() {
+        return 1*this.animElapsed
+    }
+
+    @observable animElapsed: number = 0
+
     render() {
-        const {head, assets, path} = this.props
-        const css = assets.filter(value => value.match(/\.css$/))
+        const {pokeIndex, pokemonLeft, answer, validate, isValid} = this
 
-        const description = `A little puzzle roguelike game on a hexagonal grid.`
-
-        return <head>
-            {head.title.toComponent()}
-            <meta name="viewport" content="width=device-width, initial-scale=1"/>
-            <meta name="description" content={description}/>
-            {head.meta.toComponent()}
-            {css.map(cssPath =>
-                <link rel="stylesheet" type="text/css" href={'/'+cssPath}/>  
-            )}       
-            <link rel="icon" href={faviconImg}/>         
-            {head.link.toComponent()}
-        </head>
+        return <div className="text-center">
+            <Pokemon left={pokemonLeft} number={pokeIndex+1}/>
+            <div>#{pokeIndex+1} {pokenames.ja[pokeIndex]}</div>
+            <input type="text" className={`form-control ${validate ? (isValid ? "is-valid" : "is-invalid") : ""}`} placeholder="romaji..." value={answer} onInput={this.onInput} onKeyPress={this.onKeyPress}/>
+        </div>
     }
 }
 
-export default (locals: any, callback: (val: null, html: string) => void) => {
-    const assets = Object.keys(locals.webpackStats.compilation.assets)
-    const bodyStr = ReactDOMServer.renderToString(<Body path={locals.path} assets={assets}/>)
-    const head = Helmet.renderStatic()
-    const headStr = ReactDOMServer.renderToString(<Head path={locals.path} head={head} assets={assets}/>)
-
-    callback(null, "<html>"+headStr+bodyStr+"</html>")
-};
+ReactDOM.render(<Main/>, document.getElementById("root"))

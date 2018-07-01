@@ -1,0 +1,73 @@
+@import 'normalize.css';
+@import 'node_modules/bootstrap/scss/bootstrap';
+
+button:focus {outline:0;}
+
+html, body {
+	height: 100%;
+	margin: 0;
+	font-family: 'Helvetica', 'Arial', sans-serif;
+}
+
+html {
+	font-size: 16px;
+}
+
+a {
+	color: #f5aa44;
+}
+
+#root {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.pokemon {
+	width: 32px;
+	height: 32px;
+	display: inline-block;
+}
+
+.walkin {
+	position: relative;
+	animation: walkinAnim forwards 1s linear, walkStep 0.2s infinite;
+}
+
+.walkout {
+	position: relative;
+	animation: walkoutAnim forwards 1s linear, walkStep 0.2s infinite;
+}
+
+@keyframes walkinAnim {
+	0% {
+		left: -50vw;
+	}
+
+	100% {
+		left: 0;
+	}
+}
+
+@keyframes walkoutAnim {
+	0% {
+		left: 0;
+	}
+
+	100% {
+		left: 50vw;
+	}
+}
+
+@keyframes walkStep {
+	from {
+		background-image: url("../public/overworld/right/135.png");
+	}
+
+	to {
+		background-image: url("../public/overworld/right/frame2/135.png");
+	}
+}
