@@ -4,39 +4,56 @@ import {Helmet, HelmetData} from 'react-helmet'
 import Homepage from './Homepage'
 import {observable, action, computed} from 'mobx'
 import {observer} from 'mobx-react'
+import * as _ from 'lodash'
 declare const require: any
 const wanakana = require('wanakana')
 
 import * as pokenames from './pokenames'
 import './index.scss'
 
-class Pokemon extends React.Component<{ left: number, number: number }> {
+const MAX_POKEMON = 493
+
+class Pokemon extends React.Component<{ number: number, out?: boolean }> {
     render() {
-        const {left, number} = this.props
-        return <div className="pokemon walkin"/>
+        const {number, out} = this.props
+        return <div style={`--frame1-url: url("../overworld/right/${number}.png"); --frame2-url: url("../overworld/right/frame2/${number}.png");` as any} className={`pokemon ${out ? "walkout" : "walkin"}`}/>
     }
 }
 
 @observer
 class Main extends React.Component {
-    @observable pokeIndex: number = 134//Math.floor(Math.random()*pokenames.en.length)
-    @observable answer: string = ""
-    @observable validate: boolean = false
-    @observable windowWidth = window.innerWidth
-    @observable windowHeight = window.innerHeight
+    @observable prevPoke?: number
+    @observable question: number = 1
+    @observable poke: number = 135//Math.floor(Math.random()*pokenames.en.length)
+    @observable hintCount: number = 0
+    @observable input: string = ""
 
-    @action.bound onInput(e: React.FormEvent<HTMLInputElement>) {
-        this.answer = e.currentTarget.value
+
+    @computed get japanese(): string {
+        return pokenames.ja[this.poke-1]
+    }
+    @computed get trueAnswer(): string {
+        return wanakana.toRomaji(this.japanese)
     }
 
     @action.bound onKeyPress(e: React.KeyboardEvent<HTMLInputElement>) {
         if (e.key === "Enter") {
-            this.validate = true
+            if (this.input === this.trueAnswer) {
+                this.prevPoke = this.poke
+                this.poke = _.random(1, MAX_POKEMON)
+                this.question += 1
+                this.hintCount = 0
+                this.input = ""
+            }
         }
     }
 
-    @computed get isValid() {
-        return this.answer === wanakana.toRomaji(pokenames.ja[this.pokeIndex])
+    @action.bound onInput(e: React.FormEvent<HTMLInputElement>) {
+        this.input = e.currentTarget.value
+    }
+
+    @action.bound onHint() {
+        this.hintCount += 1
     }
 
     @computed get pokemonLeft() {
@@ -46,12 +63,22 @@ class Main extends React.Component {
     @observable animElapsed: number = 0
 
     render() {
-        const {pokeIndex, pokemonLeft, answer, validate, isValid} = this
+        const {poke, prevPoke, japanese, input} = this
 
-        return <div className="text-center">
-            <Pokemon left={pokemonLeft} number={pokeIndex+1}/>
-            <div>#{pokeIndex+1} {pokenames.ja[pokeIndex]}</div>
-            <input type="text" className={`form-control ${validate ? (isValid ? "is-valid" : "is-invalid") : ""}`} placeholder="romaji..." value={answer} onInput={this.onInput} onKeyPress={this.onKeyPress}/>
+        return <div className="container text-center">
+            <div className="runway">
+                <Pokemon number={poke} key={this.question}/>
+                {prevPoke && <Pokemon number={prevPoke} out={true} key={`prev-${this.question}`}/>}
+            </div>
+            <div>#{poke} {japanese}</div>
+            <input type="text" className={`form-control`} placeholder="romaji..." onKeyPress={this.onKeyPress} value={input} onInput={this.onInput}/>
+            <br/>
+            <button className="btn btn-light text-secondary" onClick={this.onHint}>hint</button>
+            <div style={{height: "100px", marginTop: "20px"}}>
+                {_.range(0, Math.min(this.hintCount, this.japanese.length)).map(i => 
+                    <p>{/*this.japanese[i] + wanakana.toRomaji(this.japanese[i]) + " " + */this.japanese.slice(0, i+1) + " " + wanakana.toRomaji(this.japanese.slice(0, i+1))}</p>
+                )}
+            </div>
         </div>
     }
 }
