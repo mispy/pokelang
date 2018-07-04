@@ -53,7 +53,7 @@ function splitKana(jp: string): string[] {
 class Main extends React.Component {
     @observable prevPoke?: number
     @observable question: number = 1
-    @observable poke: number = 113//Math.floor(Math.random()*pokenames.en.length)
+    @observable poke: number = 135//Math.floor(Math.random()*pokenames.en.length)
     @observable nextPoke: number = _.random(1, MAX_POKEMON)
     @observable hintCount: number = 0
     @observable kanaIndex: number = 0
