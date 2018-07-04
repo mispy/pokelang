@@ -11,6 +11,10 @@ const wanakana = require('wanakana')
 import * as pokenames from './pokenames'
 import './index.scss'
 
+declare const window: any
+window.wanakana = wanakana
+window.pokenames = pokenames
+
 const MAX_POKEMON = 493
 
 class Pokemon extends React.Component<{ number: number, out?: boolean, hidden?: boolean }> {
@@ -20,52 +24,85 @@ class Pokemon extends React.Component<{ number: number, out?: boolean, hidden?: 
     }
 }
 
+// TODO handle context dependent modifiers like "ー"
+function splitKana(jp: string): string[] {
+    const kana = []
+
+    const modifiers = ["ー", "ッ", "ャ", "ョ", "ュ", "ェ"]
+    
+    for (let i = 0; i < jp.length; i++) {
+        kana.push(jp.slice(i, i+1))
+    }
+
+    return kana
+}
+
 @observer
 class Main extends React.Component {
     @observable prevPoke?: number
     @observable question: number = 1
-    @observable poke: number = 98//Math.floor(Math.random()*pokenames.en.length)
+    @observable poke: number = 135//Math.floor(Math.random()*pokenames.en.length)
     @observable nextPoke: number = _.random(1, MAX_POKEMON)
     @observable hintCount: number = 0
-    @observable input: string = ""
-
+    @observable kanaIndex: number = 0
 
     @computed get japanese(): string {
         return pokenames.ja[this.poke-1]
     }
-    @computed get trueAnswer(): string {
-        return wanakana.toRomaji(this.japanese)
+
+    @computed get kana(): string[] {
+        return splitKana(this.japanese)
     }
 
-    @action.bound onKeyPress(e: React.KeyboardEvent<HTMLInputElement>) {
-        if (e.key === "Enter") {
-            if (this.input.toLowerCase() === this.trueAnswer.toLowerCase()) {
-                this.prevPoke = this.poke
-                this.poke = this.nextPoke
-                this.nextPoke = _.random(1, MAX_POKEMON)
-                this.question += 1
-                this.hintCount = 0
-                this.input = ""
-            }
+    @computed get currentKana(): string {
+        return this.kana[this.kanaIndex]
+    }
+
+    @computed get allKana(): string[] {
+        return _.uniq(splitKana(pokenames.ja.join()))
+    }
+
+    @computed get options(): string[] {
+        return _.shuffle(_.sampleSize(this.allKana, 3).map(kana => wanakana.toRomaji(kana)).concat([this.correctOption]))
+    }
+
+    @computed get correctOption(): string {
+        return wanakana.toRomaji(this.currentKana)
+    }
+
+    @action.bound chooseOption(option: string) {
+        if (option === this.correctOption) {
+            this.kanaIndex += 1
+        }
+
+        // Skip things that aren't kana
+        while (wanakana.toRomaji(this.kana) === this.kana) {
+            this.kanaIndex += 1
+        }
+
+        if (this.kanaIndex >= this.kana.length) {
+            this.onComplete()
         }
     }
 
-    @action.bound onInput(e: React.FormEvent<HTMLInputElement>) {
-        this.input = e.currentTarget.value
+    @action.bound onComplete() {
+        this.prevPoke = this.poke
+        this.poke = this.nextPoke
+        this.nextPoke = _.random(1, MAX_POKEMON)
+        this.question += 1
+        this.hintCount = 0
+        this.kanaIndex = 0
     }
-
-    @action.bound onHint() {
-        this.hintCount += 1
-    }
-
-    @computed get pokemonLeft() {
-        return 1*this.animElapsed
-    }
-
-    @observable animElapsed: number = 0
 
     render() {
-        const {poke, prevPoke, nextPoke, japanese, input} = this
+        const {poke, prevPoke, nextPoke, japanese, kana, options, currentKana, kanaIndex} = this
+
+        for (const name of pokenames.ja) {
+            const trueRomaji = wanakana.toRomaji(name)
+            const splitRomaji = splitKana(name).map(kana => wanakana.toRomaji(kana)).join("")
+            if (trueRomaji !== splitRomaji)
+                console.log(name, trueRomaji, splitRomaji)
+        }
 
         return <div className="container text-center">
             <div className="runway">
@@ -73,14 +110,13 @@ class Main extends React.Component {
                 {prevPoke && <Pokemon number={prevPoke} out={true} key={`prev-${this.question}`}/>}
                 {nextPoke && <Pokemon number={nextPoke} key={`next-${this.question}`} hidden={true}/>}
             </div>
-            <div>#{poke} {japanese}</div>
-            <input type="text" className={`form-control`} placeholder="romaji..." onKeyPress={this.onKeyPress} value={input} onInput={this.onInput}/>
-            <button className="btn btn-light text-secondary" onClick={this.onHint}>hint</button>
-            <div style={{height: "50px", marginTop: "10px"}}>
-                {_.range(0, Math.min(this.hintCount, this.japanese.length)).map(i => 
-                    <p>{/*this.japanese[i] + wanakana.toRomaji(this.japanese[i]) + " " + */this.japanese.slice(0, i+1) + " " + wanakana.toRomaji(this.japanese.slice(0, i+1))}</p>
-                )}
-            </div>
+            <div>{currentKana}</div>
+            {options.map(option => 
+                <button className="btn btn-light text-secondary" onClick={e => this.chooseOption(option)}>{option}</button>
+            )}
+            <div>{_.range(0, kanaIndex).map(i => 
+                <span>{kana[i]} {wanakana.toRomaji(kana[i])}</span>
+            )}</div>
         </div>
     }
 }
