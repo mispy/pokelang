@@ -88,6 +88,8 @@ class Main extends React.Component {
     @observable isMobile: boolean = false
     @observable wrongOption: boolean = false
 
+    @observable wrongChoices: string[] = []
+
     @computed get japanese(): string {
         const katakana = pokenames.ja[this.poke-1]
         // TODO fix extends in hiragana
@@ -120,8 +122,9 @@ class Main extends React.Component {
     @action.bound chooseOption(option: string) {
         if (option === this.correctOption) {
             this.kanaIndex += 1
+            this.wrongChoices = []
         } else {
-            this.wrongOption = true
+            this.wrongChoices.push(option)
         }
 
         if (this.kanaIndex >= this.kana.length) {
@@ -157,7 +160,7 @@ class Main extends React.Component {
     }
     
     renderMain() {
-        const {poke, prevPoke, nextPoke, kana, options, currentKana, kanaIndex} = this
+        const {poke, prevPoke, nextPoke, kana, options, currentKana, kanaIndex, wrongChoices} = this
 
         return <main>
             <div className="container text-center">
@@ -170,7 +173,7 @@ class Main extends React.Component {
                 </div>
                 <div>{currentKana}</div>
                 {options.map((option, i) => 
-                    <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} key={`${i}-option`}>{option}</button>
+                    <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} key={`${i}-option`} disabled={_.includes(wrongChoices, option)}>{option}</button>
                 )}
                 <div>&nbsp;{_.range(0, kanaIndex).map(i => 
                     <span>{kana[i]} {wanakana.toRomaji(kana[i])}</span>
