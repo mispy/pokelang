@@ -26,6 +26,39 @@ a {
 	justify-content: center;
 }
 
+.app {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+}
+
+.sidebar {
+	height: 100%;
+	overflow-y: auto;
+	max-width: 400px;
+	padding: 2rem;
+}
+
+.inlineToggle {
+    font-weight: bold;
+    font-size: inherit;
+    font-family: inherit;
+    border: 1px outset hsl(0, 25%, 90%);
+    border-radius: 4px;
+    background: hsl(0, 0%, 90%);
+    color: black;
+    padding: 2px;
+    -webkit-appearance: none;
+    cursor: pointer;	
+}
+
+.inlineToggle.active {
+    border-color: hsl(0, 0%, 90%);
+    background: #f5aa44;
+    box-shadow: 1px 1px 3px hsla(0, 0%, 0%, 0.2);	
+}
+
 .container {
 	max-width: 300px;
 }
@@ -55,8 +88,9 @@ a {
 	animation: walkoutAnim forwards 0.6s linear, walkStep 0.2s infinite;
 }
 
-button {
+.romaji {
 	margin-top: 5px;
+	margin-right: 0.5rem;
 }
 
 .hidden {
