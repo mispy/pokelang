@@ -56,6 +56,26 @@ function InlineButton(props: { active: boolean, children: any, onClick: any }) {
 }
 
 @observer
+class PokemonPreloader extends React.Component<{ poke: number }> {
+    @computed get imgsToLoad(): string[] {
+        const {poke} = this.props
+        const urls = []
+        for (let dir of ['up', 'down', 'left', 'right']) {
+            urls.push(`./overworld/${dir}/${poke}.png`)
+            urls.push(`./overworld/${dir}/frame2/${poke}.png`)
+        }
+        return urls
+    }
+
+    render() {
+        return <div style={{ opacity: 0, position: 'fixed', right: '-99999px' }}>
+            {this.imgsToLoad.map(url => <img src={url}/>)}
+            <audio src={`cries/${this.props.poke}.ogg`}/>
+        </div>
+    }
+}
+
+@observer
 class Main extends React.Component {
     @observable prevPoke?: number
     @observable question: number = 1
@@ -143,8 +163,10 @@ class Main extends React.Component {
             <div className="container text-center">
                 <div className="runway">
                     <Pokemon number={poke} key={this.question} shake={this.wrongOption}/>
+                    <PokemonPreloader poke={poke}/>
                     {prevPoke && <Pokemon number={prevPoke} out={true} key={`prev-${this.question}`}/>}
                     {nextPoke && <Pokemon number={nextPoke} key={`next-${this.question}`} hidden={true}/>}
+                    {nextPoke && <PokemonPreloader poke={nextPoke}/>}
                 </div>
                 <div>{currentKana}</div>
                 {options.map((option, i) => 
