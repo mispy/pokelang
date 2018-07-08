@@ -64,9 +64,12 @@ class Main extends React.Component {
     @observable hintCount: number = 0
     @observable kanaIndex: number = 0
     @observable kanaMode: 'katakana'|'hiragana' = 'katakana'
+    @observable showMenu: boolean = false
+    @observable isMobile: boolean = false
 
     @computed get japanese(): string {
         const katakana = pokenames.ja[this.poke-1]
+        // TODO fix extends in hiragana
         if (this.kanaMode === 'hiragana')
             return wanakana.toHiragana(katakana)
         else
@@ -104,6 +107,11 @@ class Main extends React.Component {
     }
 
     @action.bound onComplete() {
+        // TODO preloading
+        const audio = new Audio(`cries/${this.poke}.ogg`)
+        audio.volume = 0.05
+        audio.play()
+
         this.prevPoke = this.poke
         this.poke = this.nextPoke
         this.nextPoke = _.random(1, MAX_POKEMON)
@@ -112,40 +120,73 @@ class Main extends React.Component {
         this.kanaIndex = 0
     }
 
-    render() {
-        const {poke, prevPoke, nextPoke, japanese, kana, options, currentKana, kanaIndex, kanaMode} = this
-        /*for (const name of pokenames.ja) {
-            const trueRomaji = wanakana.toRomaji(name)
-            const splitRomaji = splitKana(name).map(kana => wanakana.toRomaji(kana)).join("")
-            if (trueRomaji !== splitRomaji)
-                console.log(name, trueRomaji, splitRomaji)
-        }*/
+    @action.bound onResize() {
+        this.isMobile = window.innerWidth < 700
+    }
 
-        return <div className="app">
-            <div className="sidebar">
-                <h1>Jolteon's Adventures</h1>
-                <p>Jolteon and his Pokémon friends are traveling the world to learn new languages. Can you help them to read their Japanese names in <InlineButton active={this.kanaMode === 'katakana'} onClick={action(e => this.kanaMode = 'katakana')}>katakana</InlineButton> and <InlineButton active={this.kanaMode ==='hiragana'} onClick={action(e => this.kanaMode = 'hiragana')}>hiragana</InlineButton>?</p>
+    componentDidMount() {
+        this.onResize()
+        window.addEventListener("resize", this.onResize)
+    }
 
-                <hr/>
-                <small>Created by <a href="https://mispy.me">Jaiden Mispy</a>. Dedicated to my trusty travel companion, <a href="/fizz.jpg">Fission the Jolteon</a>.</small><br/>
-                <hr/>
-                <small><a href="https://github.com/mispy/kanajolt">https://github.com/mispy/kanajolt</a></small>
-            </div>
-            <main className="container text-center">
+    componentWillUnmount() {
+        window.removeEventListener("resize", this.onResize)
+    }
+    
+    renderMain() {
+        const {poke, prevPoke, nextPoke, kana, options, currentKana, kanaIndex} = this
+
+        return <main>
+            <div className="container text-center">
                 <div className="runway">
                     <Pokemon number={poke} key={this.question}/>
                     {prevPoke && <Pokemon number={prevPoke} out={true} key={`prev-${this.question}`}/>}
                     {nextPoke && <Pokemon number={nextPoke} key={`next-${this.question}`} hidden={true}/>}
                 </div>
                 <div>{currentKana}</div>
-                {options.map(option => 
-                    <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} key={option}>{option}</button>
+                {options.map((option, i) => 
+                    <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} key={`${i}-option`}>{option}</button>
                 )}
                 <div>&nbsp;{_.range(0, kanaIndex).map(i => 
                     <span>{kana[i]} {wanakana.toRomaji(kana[i])}</span>
                 )}</div>
-            </main>
+            </div>
+        </main>
+    }
+
+    renderMenu() {
+        return <div className="menu">
+            <h1>Jolteon's Adventures</h1>
+            <p>Jolteon and his Pokémon friends are traveling the world to learn new languages. Can you help them to read their Japanese names in <InlineButton active={this.kanaMode === 'katakana'} onClick={action(e => this.kanaMode = 'katakana')}>katakana</InlineButton> and <InlineButton active={this.kanaMode ==='hiragana'} onClick={action(e => this.kanaMode = 'hiragana')}>hiragana</InlineButton>?</p>
+
+            <hr/>
+            <small>Created by <a href="https://mispy.me">Jaiden Mispy</a>. Dedicated to my trusty travel companion, <a href="/fizz.jpg">Fission the Jolteon</a>.</small><br/>
+            <hr/>
+            <small><a href="https://github.com/mispy/kanajolt">https://github.com/mispy/kanajolt</a></small>
         </div>
+    }
+
+    renderMobile() {
+        const {showMenu} = this
+        return <div className="app mobile">
+            {showMenu ? this.renderMenu() : this.renderMain()}
+            <nav>
+                <button className="btn btn-light" onClick={action(e => this.showMenu = !this.showMenu)}>
+                    {showMenu ? <svg aria-hidden="true" data-prefix="fas" data-icon="times" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 352 512"><path fill="currentColor" d="M242.72 256l100.07-100.07c12.28-12.28 12.28-32.19 0-44.48l-22.24-22.24c-12.28-12.28-32.19-12.28-44.48 0L176 189.28 75.93 89.21c-12.28-12.28-32.19-12.28-44.48 0L9.21 111.45c-12.28 12.28-12.28 32.19 0 44.48L109.28 256 9.21 356.07c-12.28 12.28-12.28 32.19 0 44.48l22.24 22.24c12.28 12.28 32.2 12.28 44.48 0L176 322.72l100.07 100.07c12.28 12.28 32.2 12.28 44.48 0l22.24-22.24c12.28-12.28 12.28-32.19 0-44.48L242.72 256z"></path></svg> : <svg aria-hidden="true" data-prefix="fas" data-icon="bars" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M16 132h416c8.837 0 16-7.163 16-16V76c0-8.837-7.163-16-16-16H16C7.163 60 0 67.163 0 76v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16z"></path></svg>}
+                </button>
+            </nav>
+        </div>
+    }
+
+    renderDesktop() {
+        return <div className="app">
+            {this.renderMenu()}
+            {this.renderMain()}
+        </div>
+    }
+
+    render() {
+        return this.isMobile ? this.renderMobile() : this.renderDesktop()
     }
 }
 

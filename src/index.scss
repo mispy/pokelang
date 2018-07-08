@@ -31,13 +31,36 @@ a {
 	height: 100%;
 	display: flex;
 	align-items: center;
+	justify-content: center;
 }
 
-.sidebar {
+.app.mobile {
+	flex-direction: column;
+}
+
+nav {
+	width: 100%;
+	padding: 1rem;
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+}
+
+nav svg {
+	width: 0.875em;
+	display: inline-block;
+    font-size: inherit;
+    height: 1em;
+    overflow: visible;
+	vertical-align: -.125em;
+}
+
+.menu {
 	height: 100%;
 	overflow-y: auto;
 	max-width: 400px;
 	padding: 2rem;
+	flex-grow: 1;
 }
 
 .inlineToggle {
@@ -59,8 +82,10 @@ a {
     box-shadow: 1px 1px 3px hsla(0, 0%, 0%, 0.2);	
 }
 
-.container {
-	max-width: 300px;
+main {
+	flex-grow: 1;
+	display: flex;
+	align-items: center;
 }
 
 .runway {
