@@ -15,10 +15,10 @@ window.pokenames = pokenames
 
 const MAX_POKEMON = 493
 
-class Pokemon extends React.Component<{ number: number, out?: boolean, hidden?: boolean }> {
+class Pokemon extends React.Component<{ number: number, out?: boolean, hidden?: boolean, shake?: boolean }> {
     render() {
-        const {number, out, hidden} = this.props
-        return <div style={`--frame1-url: url("../overworld/right/${number}.png"); --frame2-url: url("../overworld/right/frame2/${number}.png");` as any} className={`pokemon ${out ? "walkout" : "walkin"}${hidden ? " hidden" : ""}`}/>
+        const {number, out, hidden, shake} = this.props
+        return <div style={`--frame1-url: url("../overworld/right/${number}.png"); --frame2-url: url("../overworld/right/frame2/${number}.png");` as any} className={`pokemon ${out ? "walkout" : "walkin"}${hidden ? " hidden" : ""}${shake ? " shake" : ""}`}/>
     }
 }
 
@@ -66,6 +66,7 @@ class Main extends React.Component {
     @observable kanaMode: 'katakana'|'hiragana' = 'katakana'
     @observable showMenu: boolean = false
     @observable isMobile: boolean = false
+    @observable wrongOption: boolean = false
 
     @computed get japanese(): string {
         const katakana = pokenames.ja[this.poke-1]
@@ -99,6 +100,8 @@ class Main extends React.Component {
     @action.bound chooseOption(option: string) {
         if (option === this.correctOption) {
             this.kanaIndex += 1
+        } else {
+            this.wrongOption = true
         }
 
         if (this.kanaIndex >= this.kana.length) {
@@ -139,7 +142,7 @@ class Main extends React.Component {
         return <main>
             <div className="container text-center">
                 <div className="runway">
-                    <Pokemon number={poke} key={this.question}/>
+                    <Pokemon number={poke} key={this.question} shake={this.wrongOption}/>
                     {prevPoke && <Pokemon number={prevPoke} out={true} key={`prev-${this.question}`}/>}
                     {nextPoke && <Pokemon number={nextPoke} key={`next-${this.question}`} hidden={true}/>}
                 </div>
