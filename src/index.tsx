@@ -15,10 +15,11 @@ window.pokenames = pokenames
 
 const MAX_POKEMON = 493
 
-class Pokemon extends React.Component<{ number: number, out?: boolean, hidden?: boolean, shake?: boolean }> {
+@observer
+class Pokemon extends React.Component<{ number: number, out?: boolean, hidden?: boolean }> {
     render() {
-        const {number, out, hidden, shake} = this.props
-        return <div style={`--frame1-url: url("../overworld/right/${number}.png"); --frame2-url: url("../overworld/right/frame2/${number}.png");` as any} className={`pokemon ${out ? "walkout" : "walkin"}${hidden ? " hidden" : ""}${shake ? " shake" : ""}`}/>
+        const {number, out, hidden} = this.props
+        return <div style={`--frame1-url: url("../overworld/right/${number}.png"); --frame2-url: url("../overworld/right/frame2/${number}.png");` as any} className={`pokemon ${out ? "walkout" : "walkin"}${hidden ? " hidden" : ""}`}/>
     }
 }
 
@@ -77,18 +78,38 @@ class PokemonPreloader extends React.Component<{ poke: number }> {
 
 @observer
 class Main extends React.Component {
-    @observable prevPoke?: number
     @observable question: number = 1
-    @observable poke: number = 135//Math.floor(Math.random()*pokenames.en.length)
-    @observable nextPoke: number = _.random(1, MAX_POKEMON)
     @observable hintCount: number = 0
     @observable kanaIndex: number = 0
     @observable kanaMode: 'katakana'|'hiragana' = 'katakana'
     @observable showMenu: boolean = false
     @observable isMobile: boolean = false
-    @observable wrongOption: boolean = false
+    @observable streakCounter: number = 0
+    pokeDiv: HTMLDivElement
 
     @observable wrongChoices: string[] = []
+
+    // The list of pokemon in order to show
+    @computed get pokeList() {
+        return _.shuffle(_.range(1, MAX_POKEMON+1))
+    }
+
+    @computed get pokeIndex(): number {
+        return this.question-1
+    }
+
+    // Pokedex number of current pokemon
+    @computed get poke(): number {
+        return this.pokeList[this.pokeIndex]
+    }
+
+    @computed get prevPoke(): number|undefined {
+        return this.pokeList[this.pokeIndex-1]
+    }
+
+    @computed get nextPoke(): number {
+        return this.pokeList[this.pokeIndex+1]
+    }
 
     @computed get japanese(): string {
         const katakana = pokenames.ja[this.poke-1]
@@ -122,9 +143,13 @@ class Main extends React.Component {
     @action.bound chooseOption(option: string) {
         if (option === this.correctOption) {
             this.kanaIndex += 1
+            this.streakCounter += 1
             this.wrongChoices = []
         } else {
+            this.streakCounter = 0
             this.wrongChoices.push(option)
+            this.pokeDiv.classList.remove("shake")
+            this.pokeDiv.classList.add("shake")
         }
 
         if (this.kanaIndex >= this.kana.length) {
@@ -138,9 +163,6 @@ class Main extends React.Component {
         audio.volume = 0.05
         audio.play()
 
-        this.prevPoke = this.poke
-        this.poke = this.nextPoke
-        this.nextPoke = _.random(1, MAX_POKEMON)
         this.question += 1
         this.hintCount = 0
         this.kanaIndex = 0
@@ -160,24 +182,25 @@ class Main extends React.Component {
     }
     
     renderMain() {
-        const {poke, prevPoke, nextPoke, kana, options, currentKana, kanaIndex, wrongChoices} = this
+        const {poke, prevPoke, nextPoke, kana, question, options, currentKana, kanaIndex, wrongChoices} = this
 
         return <main>
             <div className="container text-center">
                 <div className="runway">
-                    <Pokemon number={poke} key={this.question} shake={this.wrongOption}/>
+                    <Pokemon number={poke} key={this.question} ref={e => this.pokeDiv = e as any}/>
                     <PokemonPreloader poke={poke}/>
                     {prevPoke && <Pokemon number={prevPoke} out={true} key={`prev-${this.question}`}/>}
                     {nextPoke && <Pokemon number={nextPoke} key={`next-${this.question}`} hidden={true}/>}
                     {nextPoke && <PokemonPreloader poke={nextPoke}/>}
                 </div>
-                <div>{currentKana}</div>
-                {options.map((option, i) => 
-                    <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} key={`${i}-option`} disabled={_.includes(wrongChoices, option)}>{option}</button>
-                )}
-                <div>&nbsp;{_.range(0, kanaIndex).map(i => 
-                    <span>{kana[i]} {wanakana.toRomaji(kana[i])}</span>
+                <div>{kana.map((k, i) => 
+                    <span className={`kana${i === kanaIndex ? " current" : ""}`}>{k}</span>
                 )}</div>
+                {options.map((option, i) => 
+                    <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} key={`${question}-${kanaIndex}-${i}-option`} disabled={_.includes(wrongChoices, option)}>{option}</button>
+                )}
+                <p>{this.streakCounter >= 2 && <div className="text-green">Streak: {this.streakCounter}</div>}</p>
+                <p>{this.question-1} of {this.pokeList.length} named</p>
             </div>
         </main>
     }
@@ -185,7 +208,7 @@ class Main extends React.Component {
     renderMenu() {
         return <div className="menu">
             <h1>Jolteon's Adventures</h1>
-            <p>Jolteon and his Pokémon friends are traveling the world to learn new languages. Can you help them to read their Japanese names in <InlineButton active={this.kanaMode === 'katakana'} onClick={action(e => this.kanaMode = 'katakana')}>katakana</InlineButton> and <InlineButton active={this.kanaMode ==='hiragana'} onClick={action(e => this.kanaMode = 'hiragana')}>hiragana</InlineButton>?</p>
+            <p>Jolteon and his Pokémon friends are traveling the world to learn new languages. Can you help them to read their Japanese names?</p>
 
             <hr/>
             <small>Created by <a href="https://mispy.me">Jaiden Mispy</a>. Dedicated to my trusty travel companion, <a href="/fizz.jpg">Fission the Jolteon</a>.</small><br/>

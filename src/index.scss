@@ -122,6 +122,14 @@ main {
 	margin-right: 0.5rem;
 }
 
+.kana {
+	transition: opacity 0.1s ease-out;
+}
+
+.kana:not(.current) {
+	opacity: 0.3;
+}
+
 .hidden {
 	opacity: 0;
 }

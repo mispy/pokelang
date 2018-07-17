@@ -59,7 +59,7 @@ module.exports = (env, argv) => {
         ],
         devServer: {
             host: 'localhost',
-            port: 8090,
+            port: 8020,
             contentBase: 'public',
             disableHostCheck: true,
             headers: {
