@@ -188,6 +188,15 @@ main {
 		background-color: #f8f9fa !important;
 		border-color: #f8f9fa !important;
 	}	
+
+	.btn-warning:hover, .btn-warning:active {
+		background-color: inherit !important;
+		border-color: #ffc107 !important;
+	}
+
+	.btn:focus {
+		box-shadow: none !important;
+	}
 }
 
 @keyframes walkinAnim {

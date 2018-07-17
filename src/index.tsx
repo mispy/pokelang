@@ -250,7 +250,7 @@ class Main extends React.Component {
                     <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} disabled={_.includes(wrongChoices, option)}>{option}</button>
                 )}
                 <div className="stats">
-                    <div >
+                    <div className={numNamed < 1 ? 'hidden' : ''}>
                         <div>{numNamed} named</div>
                         {/*<div className="text-secondary">{this.pokeList.length - numNamed} to go</div>*/}
                     </div>
