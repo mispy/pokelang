@@ -96,6 +96,7 @@ class GameState {
     @observable kanaMode: 'katakana'|'hiragana'|'both' = 'katakana'
     @observable streakCounter: number = 0
     @observable bestStreak: number = 0
+    @observable charactersSeen: { [key: string]: boolean } = {}
 
     save() {
         localStorage.setItem('kanajolt', JSON.stringify(this))
@@ -183,8 +184,18 @@ class Main extends React.Component {
         return this.game.questionIndex
     }
 
+    @computed get hintText(): string|undefined {
+        if (!this.game.charactersSeen[this.currentKana])
+            return `New kana: ${this.currentKana} ${wanakana.toRomaji(this.currentKana)}`
+        else if (this.wrongChoices.length)
+            return `Hint: ${this.currentKana} ${wanakana.toRomaji(this.currentKana)}`
+        else
+            return undefined
+    }
+
     @action.bound chooseOption(option: string) {
         if (option === this.correctOption) {
+            this.game.charactersSeen[this.currentKana] = true
             this.game.kanaIndex += 1
             this.game.streakCounter += 1
             if (this.game.streakCounter > this.game.bestStreak)
@@ -230,7 +241,7 @@ class Main extends React.Component {
     }
     
     renderMain() {
-        const {poke, prevPoke, nextPoke, kana, options, currentKana, wrongChoices, numNamed} = this
+        const {poke, prevPoke, nextPoke, kana, options, currentKana, wrongChoices, numNamed, hintText} = this
         const {game} = this
         const {kanaIndex, streakCounter} = this.game
 
@@ -259,6 +270,7 @@ class Main extends React.Component {
                         <div>Best: {game.bestStreak}</div>
                     </div>
                 </div>
+                {<p className="hint">{hintText}</p>}
             </div>
         </main>
     }
@@ -267,7 +279,7 @@ class Main extends React.Component {
         const {game} = this
         return <div className="menu">
             <section className="description">
-                <h1>Jolteon's Adventures</h1>
+                <h1>Kanajolt</h1>
                 <p>Jolteon and his Pokémon friends are traveling the world to learn new languages. Can you help them to read their Japanese names?</p>
             </section>
             <hr/>
@@ -310,6 +322,10 @@ class Main extends React.Component {
         const {showMenu} = this
         return <div className="app mobile">
             <div className="contents">
+                <header>
+                    <h1>Kanajolt</h1>
+                    <p>Learn kana by naming the Pokémon</p>
+                </header>
                 {this.renderMain()}
                 {showMenu && this.renderMenu()}
             </div>

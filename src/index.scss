@@ -36,6 +36,19 @@ a, a:hover {
 
 .app.mobile {
 	flex-direction: column;
+
+	header {
+		padding: 1rem;
+		color: #333;
+	}
+
+	header h1 {
+		font-size: 1.5rem;
+	}
+
+	header p {
+		font-size: 0.8rem;
+	}
 }
 
 .contents {
@@ -43,6 +56,7 @@ a, a:hover {
 	width: 100%;
 	flex-grow: 1;
 	display: flex;
+	flex-direction: column;
 }
 
 nav {
@@ -181,6 +195,13 @@ main {
 		margin-left: 1em;
 		margin-right: 1em;
 	}
+}
+
+.hint {
+	height: 10vh;
+	overflow-y: auto;
+	margin-top: 1rem;
+	color: #999;
 }
 
 @media (hover: none) {
