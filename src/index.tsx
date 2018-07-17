@@ -15,11 +15,23 @@ window.pokenames = pokenames
 
 const MAX_POKEMON = 493
 
+function toggleAnimClass(el: HTMLElement, klass: string) {
+    el.classList.remove(klass)
+    setTimeout(() => el.classList.add(klass), 1)
+}
+
 @observer
-class Pokemon extends React.Component<{ number: number, out?: boolean, hidden?: boolean }> {
+class Pokemon extends React.Component<{ number: number, out?: boolean, hidden?: boolean, shakeCount?: number }> {
+    base: HTMLDivElement
+    componentDidUpdate() {
+        if (this.props.shakeCount) {
+            toggleAnimClass(this.base, "shake")
+        }
+    }
+
     render() {
         const {number, out, hidden} = this.props
-        return <div style={`--frame1-url: url("../overworld/right/${number}.png"); --frame2-url: url("../overworld/right/frame2/${number}.png");` as any} className={`pokemon ${out ? "walkout" : "walkin"}${hidden ? " hidden" : ""}`}/>
+        return <div style={`--frame1-url: url("../overworld/right/${number}.png"); --frame2-url: url("../overworld/right/frame2/${number}.png");` as any} className={`pokemon ${out ? "walkout" : "walkin"}${hidden ? " hidden" : ""}`} ref={e => this.base = e as any}/>
     }
 }
 
@@ -76,15 +88,19 @@ class PokemonPreloader extends React.Component<{ poke: number }> {
     }
 }
 
-@observer
-class Main extends React.Component {
+class GameState {
     @observable question: number = 1
     @observable hintCount: number = 0
     @observable kanaIndex: number = 0
     @observable kanaMode: 'katakana'|'hiragana' = 'katakana'
+    @observable streakCounter: number = 0
+}
+
+@observer
+class Main extends React.Component {
+    game: GameState = new GameState()
     @observable showMenu: boolean = false
     @observable isMobile: boolean = false
-    @observable streakCounter: number = 0
     pokeDiv: HTMLDivElement
 
     @observable wrongChoices: string[] = []
@@ -95,7 +111,7 @@ class Main extends React.Component {
     }
 
     @computed get pokeIndex(): number {
-        return this.question-1
+        return this.game.question-1
     }
 
     // Pokedex number of current pokemon
@@ -114,7 +130,7 @@ class Main extends React.Component {
     @computed get japanese(): string {
         const katakana = pokenames.ja[this.poke-1]
         // TODO fix extends in hiragana
-        if (this.kanaMode === 'hiragana')
+        if (this.game.kanaMode === 'hiragana')
             return wanakana.toHiragana(katakana)
         else
             return katakana
@@ -125,7 +141,7 @@ class Main extends React.Component {
     }
 
     @computed get currentKana(): string {
-        return this.kana[this.kanaIndex]
+        return this.kana[this.game.kanaIndex]
     }
 
     @computed get optionSet(): string[] {
@@ -142,17 +158,15 @@ class Main extends React.Component {
 
     @action.bound chooseOption(option: string) {
         if (option === this.correctOption) {
-            this.kanaIndex += 1
-            this.streakCounter += 1
+            this.game.kanaIndex += 1
+            this.game.streakCounter += 1
             this.wrongChoices = []
         } else {
-            this.streakCounter = 0
+            this.game.streakCounter = 0
             this.wrongChoices.push(option)
-            this.pokeDiv.classList.remove("shake")
-            this.pokeDiv.classList.add("shake")
         }
 
-        if (this.kanaIndex >= this.kana.length) {
+        if (this.game.kanaIndex >= this.kana.length) {
             this.onComplete()
         }
     }
@@ -163,9 +177,8 @@ class Main extends React.Component {
         audio.volume = 0.05
         audio.play()
 
-        this.question += 1
-        this.hintCount = 0
-        this.kanaIndex = 0
+        this.game.question += 1
+        this.game.kanaIndex = 0
     }
 
     @action.bound onResize() {
@@ -175,6 +188,7 @@ class Main extends React.Component {
     componentDidMount() {
         this.onResize()
         window.addEventListener("resize", this.onResize)
+        window.game = this.game
     }
 
     componentWillUnmount() {
@@ -182,25 +196,26 @@ class Main extends React.Component {
     }
     
     renderMain() {
-        const {poke, prevPoke, nextPoke, kana, question, options, currentKana, kanaIndex, wrongChoices} = this
+        const {poke, prevPoke, nextPoke, kana, options, currentKana, wrongChoices} = this
+        const {question, kanaIndex, streakCounter} = this.game
 
         return <main>
             <div className="container text-center">
                 <div className="runway">
-                    <Pokemon number={poke} key={this.question} ref={e => this.pokeDiv = e as any}/>
+                    <Pokemon number={poke} key={question} shakeCount={wrongChoices.length}/>
                     <PokemonPreloader poke={poke}/>
-                    {prevPoke && <Pokemon number={prevPoke} out={true} key={`prev-${this.question}`}/>}
-                    {nextPoke && <Pokemon number={nextPoke} key={`next-${this.question}`} hidden={true}/>}
+                    {prevPoke && <Pokemon number={prevPoke} out={true} key={`prev-${question}`}/>}
+                    {nextPoke && <Pokemon number={nextPoke} key={`next-${question}`} hidden={true}/>}
                     {nextPoke && <PokemonPreloader poke={nextPoke}/>}
                 </div>
                 <div>{kana.map((k, i) => 
                     <span className={`kana${i === kanaIndex ? " current" : ""}`}>{k}</span>
                 )}</div>
                 {options.map((option, i) => 
-                    <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} key={`${question}-${kanaIndex}-${i}-option`} disabled={_.includes(wrongChoices, option)}>{option}</button>
+                    <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} disabled={_.includes(wrongChoices, option)}>{option}</button>
                 )}
-                <p>{this.streakCounter >= 2 && <div className="text-green">Streak: {this.streakCounter}</div>}</p>
-                <p>{this.question-1} of {this.pokeList.length} named</p>
+                <p>{streakCounter >= 2 && <div className="text-green">Streak: {streakCounter}</div>}</p>
+                <p>{question-1} of {this.pokeList.length} named</p>
             </div>
         </main>
     }
