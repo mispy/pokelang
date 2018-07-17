@@ -41,8 +41,9 @@ class Pokemon extends React.Component<{ number: number, out?: boolean, hidden?: 
 function splitKana(jp: string): string[] {
     const kana = []
 
-    const beforeModifiers = ["ッ"]
-    const afterModifiers = ["ー", "ャ", "ョ", "ュ", "ェ"]
+    const beforeModifiers = ["ッ", "っ"]
+    const afterModifiers = ["ー", "ャ", "ョ", "ュ", "ェ",
+                                  "ゃ", "ょ", "ゅ", "ぇ"]
     
     for (let i = 0; i < jp.length; i++) {
         let j = i
@@ -97,7 +98,6 @@ class GameState {
     @observable bestStreak: number = 0
 
     save() {
-        console.log(JSON.stringify(this))
         localStorage.setItem('kanajolt', JSON.stringify(this))
     }
 
