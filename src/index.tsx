@@ -1,6 +1,6 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
-import {observable, action, computed} from 'mobx'
+import {observable, action, computed, autorun, IReactionDisposer} from 'mobx'
 import {observer} from 'mobx-react'
 import * as _ from 'lodash'
 declare const require: any
@@ -94,6 +94,19 @@ class GameState {
     @observable kanaIndex: number = 0
     @observable kanaMode: 'katakana'|'hiragana' = 'katakana'
     @observable streakCounter: number = 0
+
+    save() {
+        console.log(JSON.stringify(this))
+        localStorage.setItem('kanajolt', JSON.stringify(this))
+    }
+
+    @action.bound load() {
+        const save = JSON.parse(localStorage.getItem('kanajolt') || "{}")
+        for (const key in this) {
+            if (key in save)
+                this[key] = save[key]
+        }
+    }
 }
 
 @observer
@@ -107,7 +120,7 @@ class Main extends React.Component {
 
     // The list of pokemon in order to show
     @computed get pokeList() {
-        return _.shuffle(_.range(1, MAX_POKEMON+1))
+        return _.range(1, MAX_POKEMON+1)
     }
 
     @computed get pokeIndex(): number {
@@ -156,6 +169,10 @@ class Main extends React.Component {
         return _.shuffle(_.sampleSize(this.optionSet, 3).concat([this.correctOption]))
     }
 
+    @computed get numNamed(): number {
+        return this.game.question-1
+    }
+
     @action.bound chooseOption(option: string) {
         if (option === this.correctOption) {
             this.game.kanaIndex += 1
@@ -185,18 +202,23 @@ class Main extends React.Component {
         this.isMobile = window.innerWidth < 700
     }
 
+    dispose: IReactionDisposer
     componentDidMount() {
         this.onResize()
         window.addEventListener("resize", this.onResize)
         window.game = this.game
+
+        this.game.load()
+        this.dispose = autorun(() => this.game.save())
     }
 
     componentWillUnmount() {
         window.removeEventListener("resize", this.onResize)
+        this.dispose()
     }
     
     renderMain() {
-        const {poke, prevPoke, nextPoke, kana, options, currentKana, wrongChoices} = this
+        const {poke, prevPoke, nextPoke, kana, options, currentKana, wrongChoices, numNamed} = this
         const {question, kanaIndex, streakCounter} = this.game
 
         return <main>
@@ -215,7 +237,7 @@ class Main extends React.Component {
                     <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} disabled={_.includes(wrongChoices, option)}>{option}</button>
                 )}
                 <p>{streakCounter >= 2 && <div className="text-green">Streak: {streakCounter}</div>}</p>
-                <p>{question-1} of {this.pokeList.length} named</p>
+                <p>{numNamed} named <span className="text-secondary">({this.pokeList.length - numNamed} to go)</span></p>
             </div>
         </main>
     }
