@@ -89,11 +89,12 @@ class PokemonPreloader extends React.Component<{ poke: number }> {
 }
 
 class GameState {
-    @observable question: number = 1
+    @observable questionIndex: number = 0
     @observable hintCount: number = 0
     @observable kanaIndex: number = 0
-    @observable kanaMode: 'katakana'|'hiragana' = 'katakana'
+    @observable kanaMode: 'katakana'|'hiragana'|'both' = 'katakana'
     @observable streakCounter: number = 0
+    @observable bestStreak: number = 0
 
     save() {
         console.log(JSON.stringify(this))
@@ -106,6 +107,12 @@ class GameState {
             if (key in save)
                 this[key] = save[key]
         }
+    }
+
+    @action.bound clearSave() {
+        const newGame = new GameState()
+        newGame.save()
+        this.load()
     }
 }
 
@@ -124,7 +131,7 @@ class Main extends React.Component {
     }
 
     @computed get pokeIndex(): number {
-        return this.game.question-1
+        return this.game.questionIndex
     }
 
     // Pokedex number of current pokemon
@@ -142,8 +149,9 @@ class Main extends React.Component {
 
     @computed get japanese(): string {
         const katakana = pokenames.ja[this.poke-1]
+
         // TODO fix extends in hiragana
-        if (this.game.kanaMode === 'hiragana')
+        if (this.game.kanaMode === 'hiragana' || (this.game.kanaMode === 'both' && Math.random() > 0.5))
             return wanakana.toHiragana(katakana)
         else
             return katakana
@@ -170,13 +178,15 @@ class Main extends React.Component {
     }
 
     @computed get numNamed(): number {
-        return this.game.question-1
+        return this.game.questionIndex
     }
 
     @action.bound chooseOption(option: string) {
         if (option === this.correctOption) {
             this.game.kanaIndex += 1
             this.game.streakCounter += 1
+            if (this.game.streakCounter > this.game.bestStreak)
+                this.game.bestStreak = this.game.streakCounter
             this.wrongChoices = []
         } else {
             this.game.streakCounter = 0
@@ -194,7 +204,7 @@ class Main extends React.Component {
         audio.volume = 0.05
         audio.play()
 
-        this.game.question += 1
+        this.game.questionIndex += 1
         this.game.kanaIndex = 0
     }
 
@@ -219,15 +229,16 @@ class Main extends React.Component {
     
     renderMain() {
         const {poke, prevPoke, nextPoke, kana, options, currentKana, wrongChoices, numNamed} = this
-        const {question, kanaIndex, streakCounter} = this.game
+        const {game} = this
+        const {kanaIndex, streakCounter} = this.game
 
         return <main>
             <div className="container text-center">
                 <div className="runway">
-                    <Pokemon number={poke} key={question} shakeCount={wrongChoices.length}/>
+                    <Pokemon number={poke} key={game.questionIndex} shakeCount={wrongChoices.length}/>
                     <PokemonPreloader poke={poke}/>
-                    {prevPoke && <Pokemon number={prevPoke} out={true} key={`prev-${question}`}/>}
-                    {nextPoke && <Pokemon number={nextPoke} key={`next-${question}`} hidden={true}/>}
+                    {prevPoke && <Pokemon number={prevPoke} out={true} key={`prev-${game.questionIndex}`}/>}
+                    {nextPoke && <Pokemon number={nextPoke} key={`next-${game.questionIndex}`} hidden={true}/>}
                     {nextPoke && <PokemonPreloader poke={nextPoke}/>}
                 </div>
                 <div>{kana.map((k, i) => 
@@ -236,28 +247,70 @@ class Main extends React.Component {
                 {options.map((option, i) => 
                     <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} disabled={_.includes(wrongChoices, option)}>{option}</button>
                 )}
-                <p>{streakCounter >= 2 && <div className="text-green">Streak: {streakCounter}</div>}</p>
-                <p>{numNamed} named <span className="text-secondary">({this.pokeList.length - numNamed} to go)</span></p>
+                <div className="stats">
+                    <div >
+                        <div>{numNamed} named</div>
+                        {/*<div className="text-secondary">{this.pokeList.length - numNamed} to go</div>*/}
+                    </div>
+                    <div className={game.bestStreak < 5 ? 'hidden' : ''}>
+                        <div className={game.streakCounter > 1 ? "text-success" : "text-secondary"}>Streak: {streakCounter}</div>
+                        <div>Best: {game.bestStreak}</div>
+                    </div>
+                </div>
             </div>
         </main>
     }
 
     renderMenu() {
+        const {game} = this
         return <div className="menu">
-            <h1>Jolteon's Adventures</h1>
-            <p>Jolteon and his Pokémon friends are traveling the world to learn new languages. Can you help them to read their Japanese names?</p>
-
+            <section className="description">
+                <h1>Jolteon's Adventures</h1>
+                <p>Jolteon and his Pokémon friends are traveling the world to learn new languages. Can you help them to read their Japanese names?</p>
+            </section>
             <hr/>
-            <small>Created by <a href="https://mispy.me">Jaiden Mispy</a>. Dedicated to my trusty travel companion, <a href="/fizz.jpg">Fission the Jolteon</a>.</small><br/>
+            <section className="settings">
+                <p>Pokémon names are traditionally written in <a href="https://en.wikipedia.org/wiki/Katakana">katakana</a>, the syllabary used for loanwords, technical terms and emphasis. For learning purposes, you can allow them to appear in <a href="https://en.wikipedia.org/wiki/Hiragana">hiragana</a> as well.</p>
+                <div className="pretty p-default p-round">
+                    <input type="radio" id="katakana" checked={game.kanaMode === "katakana"} onChange={action(() => game.kanaMode = 'katakana')}/>
+                    <div className="state p-success">
+                        <label htmlFor="katakana">Katakana</label>
+                    </div>
+                </div>
+                <div className="pretty p-default p-round">
+                    <input type="radio" id="hiragana" checked={game.kanaMode === "hiragana"} onChange={action(() => game.kanaMode = 'hiragana')}/>
+                    <div className="state p-success">
+                        <label htmlFor="hiragana">Hiragana</label>
+                    </div>
+                </div>
+                <div className="pretty p-default p-round">
+                    <input type="radio" id="bothkana" checked={game.kanaMode === "both"} onChange={action(() => game.kanaMode = 'both')}/>
+                    <div className="state p-success">
+                        <label htmlFor="bothkana">Both</label>
+                    </div>
+                </div>
+                <hr/>
+                <p>Your progress is saved automatically on the device you are using.</p>
+                <div className="clearSave">
+                    <span>Named: {this.game.questionIndex}</span> <button className="btn btn-danger" onClick={this.game.clearSave}>Clear Save</button>
+                </div>
+            </section>
             <hr/>
-            <small><a href="https://github.com/mispy/kanajolt">https://github.com/mispy/kanajolt</a></small>
+            <section className="about">
+                <small>Created by <a href="https://mispy.me">Jaiden Mispy</a>. Dedicated to my trusty travel companion, <a href="/fizz.jpg">Fission the Jolteon</a>.</small><br/>
+                <hr/>
+                <small><a href="https://github.com/mispy/kanajolt">https://github.com/mispy/kanajolt</a></small>
+            </section>
         </div>
     }
 
     renderMobile() {
         const {showMenu} = this
         return <div className="app mobile">
-            {showMenu ? this.renderMenu() : this.renderMain()}
+            <div className="contents">
+                {this.renderMain()}
+                {showMenu && this.renderMenu()}
+            </div>
             <nav>
                 <button className="btn btn-light" onClick={action(e => this.showMenu = !this.showMenu)}>
                     {showMenu ? <svg aria-hidden="true" data-prefix="fas" data-icon="times" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 352 512"><path fill="currentColor" d="M242.72 256l100.07-100.07c12.28-12.28 12.28-32.19 0-44.48l-22.24-22.24c-12.28-12.28-32.19-12.28-44.48 0L176 189.28 75.93 89.21c-12.28-12.28-32.19-12.28-44.48 0L9.21 111.45c-12.28 12.28-12.28 32.19 0 44.48L109.28 256 9.21 356.07c-12.28 12.28-12.28 32.19 0 44.48l22.24 22.24c12.28 12.28 32.2 12.28 44.48 0L176 322.72l100.07 100.07c12.28 12.28 32.2 12.28 44.48 0l22.24-22.24c12.28-12.28 12.28-32.19 0-44.48L242.72 256z"></path></svg> : <svg aria-hidden="true" data-prefix="fas" data-icon="bars" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path fill="currentColor" d="M16 132h416c8.837 0 16-7.163 16-16V76c0-8.837-7.163-16-16-16H16C7.163 60 0 67.163 0 76v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16zm0 160h416c8.837 0 16-7.163 16-16v-40c0-8.837-7.163-16-16-16H16c-8.837 0-16 7.163-16 16v40c0 8.837 7.163 16 16 16z"></path></svg>}
