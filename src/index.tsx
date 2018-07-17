@@ -127,7 +127,9 @@ class Main extends React.Component {
 
     // The list of pokemon in order to show
     @computed get pokeList() {
-        return _.range(1, MAX_POKEMON+1)
+        const pokes = _.range(1, MAX_POKEMON+1)
+        pokes.splice(pokes.indexOf(135), 1)
+        return [135].concat(pokes)
     }
 
     @computed get pokeIndex(): number {
