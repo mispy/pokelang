@@ -294,7 +294,7 @@ class Main extends React.Component {
                 <hr/>
                 <p>Your progress is saved automatically on the device you are using.</p>
                 <div className="clearSave">
-                    <span>Named: {this.game.questionIndex}</span> <button className="btn btn-danger" onClick={this.game.clearSave}>Clear Save</button>
+                    <span>Named: {this.game.questionIndex}</span> <button className="btn btn-warning" onClick={this.game.clearSave}>Clear Save</button>
                 </div>
             </section>
             <hr/>
