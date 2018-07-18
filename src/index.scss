@@ -135,6 +135,7 @@ main {
 	flex-grow: 1;
 	display: flex;
 	align-items: center;
+	height: 100%;
 }
 
 .runway {
@@ -195,6 +196,13 @@ main {
 		margin-left: 1em;
 		margin-right: 1em;
 	}
+}
+
+.ending {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .hint {
