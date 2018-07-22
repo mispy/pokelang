@@ -163,10 +163,13 @@ class Ending extends React.Component {
         const bbox = getFauxBBox(path)
 
         const bounds = (this.base.parentNode as any).getBoundingClientRect()
-        const scale = Math.min(bounds.width/bbox.width, bounds.height/bbox.height)*0.9
+        const scale = Math.min(bounds.width/bbox.width, bounds.height/bbox.height)*0.8
 
-        this.base.style['width'] = `${bbox.width*scale}px`
-        this.base.style['height'] = `${bbox.height*scale}px`
+        const targetWidth = bbox.width*scale
+        const targetHeight = bbox.height*scale
+
+        this.base.style['width'] = `${targetWidth}px`
+        this.base.style['height'] = `${targetHeight}px`
 
         const imgs = this.base.querySelectorAll("img")
         const interdist = length / imgs.length
@@ -174,8 +177,8 @@ class Ending extends React.Component {
             const img = imgs[i]
             const dest = path.getPointAtLength(i*interdist)
 
-            const tx = scale * dest.x - 16
-            const ty = scale * dest.y - 16
+            const tx = (scale * dest.x - 16)
+            const ty = (scale * dest.y - 16)
             img.style.left = `${tx}px`
             img.style.top = `${ty}px`
         }
@@ -199,6 +202,7 @@ class Main extends React.Component {
     @observable showMenu: boolean = false
     @observable isMobile: boolean = false
     @observable isTransition: boolean = false
+    inputBuffer: string = ""
     pokeDiv: HTMLDivElement
     pokeCry: HTMLAudioElement
 
@@ -251,6 +255,7 @@ class Main extends React.Component {
     }
 
     @computed get currentKana(): string {
+        
         return this.kana[this.game.kanaIndex]
     }
 
@@ -270,13 +275,31 @@ class Main extends React.Component {
         return this.game.questionIndex
     }
 
-    @computed get hintText(): string|undefined {
+    @computed get hint() {
         if (this.isTransition) return undefined
 
-        if (!this.game.charactersSeen[this.currentKana])
-            return `New ${this.questionKanaMode}: ${this.currentKana} ${wanakana.toRomaji(this.currentKana)}`
+        if (this.game.questionIndex === 0 && this.correctOption === "sa")
+            return [
+                <p>The first character of Jolteon's name in Japanese is "sa" ({this.currentKana}). Each time you see a new character, we'll show you the correct answer.</p>,
+                <p>Choose the option "sa" above to continue.</p>
+            ]
+        else if (this.game.questionIndex === 0 && this.correctOption === "n")
+            return [
+                <p>The second character is "n" ({this.currentKana}). This is the only kana character that represents a single consonant rather than a syllable.</p>,
+            ]
+        else if (this.game.questionIndex === 0 && this.correctOption === "daa")
+            return [
+                <p>The third and fourth characters together make "daa" ({this.currentKana}). Some characters affect how others are read contextually, such as the long-vowel mark "ー".</p>,
+            ]
+        else if (this.game.questionIndex === 0 && this.correctOption === "su")
+            return [
+                <p>The final character is "su" ({this.currentKana}), giving us "Sandaasu" or... "Thunders". Many Pokémon names are really English loanwords!</p>,
+                <p>There are 493 Pokémon for you to name in total, all of the 4th generation. Good luck!</p>
+            ]
+        else if (!this.game.charactersSeen[this.currentKana])
+            return <p>New {this.questionKanaMode}: {this.currentKana} {wanakana.toRomaji(this.currentKana)}</p>
         else if (this.wrongChoices.length)
-            return `Hint: ${this.currentKana} ${wanakana.toRomaji(this.currentKana)}`
+            return <p>Hint: {this.currentKana} {wanakana.toRomaji(this.currentKana)}`</p>
         else
             return undefined
     }
@@ -289,12 +312,9 @@ class Main extends React.Component {
         if (option === this.correctOption) {
             this.game.charactersSeen[this.currentKana] = true
             this.game.kanaIndex += 1
-            this.game.streakCounter += 1
-            if (this.game.streakCounter > this.game.bestStreak)
-                this.game.bestStreak = this.game.streakCounter
             this.wrongChoices = []
         } else {
-            this.game.streakCounter = 0
+            this.game.streakCounter = -1
             this.wrongChoices.push(option)
         }
 
@@ -304,6 +324,10 @@ class Main extends React.Component {
     }
 
     @action.bound onComplete() {
+        this.game.streakCounter += 1
+        if (this.game.streakCounter > this.game.bestStreak)
+            this.game.bestStreak = this.game.streakCounter
+
         this.pokeCry.volume = 0.05
         this.pokeCry.play()
         this.isTransition = true
@@ -323,9 +347,19 @@ class Main extends React.Component {
     // It's a bit slower to click on things than to tap them, so for
     // PC we also support keyboard input
     @action.bound onKeydown(e: KeyboardEvent) {
+        // Choose option by number
         const num = parseInt(e.key)
         if (!isNaN(num) && num > 0 && num <= this.options.length) {
             this.chooseOption(this.options[num-1])
+        } else if (isNaN(num)) {
+            this.inputBuffer += e.key
+            const maxLength = _.max(this.options.map(opt => opt.length)) as number
+            if (_.some(this.options, option => option === this.inputBuffer)) {
+                this.chooseOption(this.inputBuffer)
+                this.inputBuffer = ""
+            } else if (this.inputBuffer.length > maxLength) {
+                this.inputBuffer = ""
+            }
         }
     }
 
@@ -345,7 +379,8 @@ class Main extends React.Component {
 
         autorun(() => { 
             // Preload the cry for the current pokemon before we need to play it
-            this.pokeCry = new Audio(`cries/${this.poke}.ogg`)
+            if (this.poke)
+                this.pokeCry = new Audio(`cries/${this.poke}.ogg`)
         })
     }
 
@@ -364,7 +399,7 @@ class Main extends React.Component {
     renderMain() {
         if (this.isEnding)
             return <main><Ending/></main>
-        const {poke, prevPoke, nextPoke, kana, options, currentKana, wrongChoices, numNamed, hintText} = this
+        const {poke, prevPoke, nextPoke, kana, options, currentKana, wrongChoices, numNamed, hint} = this
         const {game} = this
         const {kanaIndex, streakCounter} = this.game
 
@@ -392,16 +427,13 @@ class Main extends React.Component {
                     )}
                 </div>
                 <div className="stats">
-                    <div className={numNamed < 1 ? 'hidden' : ''}>
-                        <div>{numNamed} named</div>
-                        {/*<div className="text-secondary">{this.pokeList.length - numNamed} to go</div>*/}
-                    </div>
-                    <div className={game.bestStreak < 5 ? 'hidden' : ''}>
+                    <div className={game.streakCounter < 2 ? 'hidden' : ''}>
                         <div className={game.streakCounter > 1 ? "text-success" : "text-secondary"}>Streak: {streakCounter}</div>
-                        <div>Best: {game.bestStreak}</div>
                     </div>
                 </div>
-                <p className="hint">{hintText}</p>
+                <div className="hint">
+                    {hint}
+                </div>
             </div>
         </main>
     }
@@ -437,7 +469,7 @@ class Main extends React.Component {
                 <hr/>
                 <p>Your progress is saved automatically on the device you are using.</p>
                 <div className="clearSave">
-                    <span>Named: {this.game.questionIndex}</span> <button className="btn btn-warning" onClick={this.game.clearSave}>{this.isEnding ? "New Game" : "Clear Save"}</button>
+                    <span>Named: {this.game.questionIndex}</span> <button className="btn btn-warning" onClick={this.game.clearSave}>{this.isEnding ? "New Game" : "Reset Game"}</button>
                 </div>
             </section>
             <hr/>
