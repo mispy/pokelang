@@ -299,7 +299,7 @@ class Main extends React.Component {
         else if (!this.game.charactersSeen[this.currentKana])
             return <p>New {this.questionKanaMode}: {this.currentKana} {wanakana.toRomaji(this.currentKana)}</p>
         else if (this.wrongChoices.length)
-            return <p>Hint: {this.currentKana} {wanakana.toRomaji(this.currentKana)}`</p>
+            return <p>Hint: {this.currentKana} {wanakana.toRomaji(this.currentKana)}</p>
         else
             return undefined
     }
