@@ -1,6 +1,6 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
-import {observable, action, computed, autorun, IReactionDisposer} from 'mobx'
+import {observable, action, computed, autorun, reaction, IReactionDisposer} from 'mobx'
 import {observer} from 'mobx-react'
 import * as _ from 'lodash'
 declare const require: any
@@ -85,7 +85,6 @@ class PokemonPreloader extends React.Component<{ poke: number }> {
     render() {
         return <div style={{ opacity: 0, position: 'fixed', right: '-99999px' }}>
             {this.imgsToLoad.map(url => <img src={url}/>)}
-            <audio src={`cries/${this.props.poke}.ogg`}/>
         </div>
     }
 }
@@ -141,7 +140,17 @@ function getFauxBBox(path: SVGPathElement) {
 @observer
 class Ending extends React.Component {
     base: HTMLDivElement
+
     componentDidMount() {
+        window.addEventListener('resize', this.reposition)
+        this.reposition()
+    }
+
+    componentWillUnmount() {
+        window.removeEventListener('resize', this.reposition)
+    }
+
+    @action.bound reposition() {
         const pathSpec = "M 297.29747,550.86823 C 283.52243,535.43191 249.1268,505.33855 220.86277,483.99412 C 137.11867,420.75228 125.72108,411.5999 91.719238,380.29088 C 29.03471,322.57071 2.413622,264.58086 2.5048478,185.95124 C 2.5493594,147.56739 5.1656152,132.77929 15.914734,110.15398 C 34.151433,71.768267 61.014996,43.244667 95.360052,25.799457 C 119.68545,13.443675 131.6827,7.9542046 172.30448,7.7296236 C 214.79777,7.4947896 223.74311,12.449347 248.73919,26.181459 C 279.1637,42.895777 310.47909,78.617167 316.95242,103.99205 L 320.95052,119.66445 L 330.81015,98.079942 C 386.52632,-23.892986 564.40851,-22.06811 626.31244,101.11153 C 645.95011,140.18758 648.10608,223.6247 630.69256,270.6244 C 607.97729,331.93377 565.31255,378.67493 466.68622,450.30098 C 402.0054,497.27462 328.80148,568.34684 323.70555,578.32901 C 317.79007,589.91654 323.42339,580.14491 297.29747,550.86823 z"
 
         const path = document.createElementNS("http://www.w3.org/2000/svg", 'path')
@@ -173,12 +182,13 @@ class Ending extends React.Component {
     }
 
     render() {
-
-
         return <div className="ending" ref={e => this.base = (e as any)}>
             {_.range(0, 50).map(i => {
                 return <img style={{ position: 'absolute', left: 0, top: 0}} src="../overworld/right/135.png"/>
             })}
+            <div>
+                <p>おめでとうございます!</p>
+            </div>
         </div>
     }
 }
@@ -189,6 +199,7 @@ class Main extends React.Component {
     @observable showMenu: boolean = false
     @observable isMobile: boolean = false
     pokeDiv: HTMLDivElement
+    pokeCry: HTMLAudioElement
 
     @observable wrongChoices: string[] = []
 
@@ -225,6 +236,7 @@ class Main extends React.Component {
 
     @computed get japanese(): string {
         const katakana = pokenames.ja[this.poke-1]
+        if (!katakana) return ""
 
         // TODO fix extends in hiragana
         if (this.questionKanaMode === "hiragana")
@@ -266,6 +278,10 @@ class Main extends React.Component {
             return undefined
     }
 
+    @computed get isEnding(): boolean {
+        return this.game.questionIndex >= this.pokeList.length
+    }
+
     @action.bound chooseOption(option: string) {
         if (option === this.correctOption) {
             this.game.charactersSeen[this.currentKana] = true
@@ -285,10 +301,8 @@ class Main extends React.Component {
     }
 
     @action.bound onComplete() {
-        // TODO preloading
-        const audio = new Audio(`cries/${this.poke}.ogg`)
-        audio.volume = 0.05
-        audio.play()
+        this.pokeCry.volume = 0.05
+        this.pokeCry.play()
 
         this.game.questionIndex += 1
         this.game.kanaIndex = 0
@@ -320,6 +334,12 @@ class Main extends React.Component {
         this.dispose = autorun(() => this.game.save())
 
         this.componentDidUpdate()
+
+
+        autorun(() => { 
+            // Preload the cry for the current pokemon before we need to play it
+            this.pokeCry = new Audio(`cries/${this.poke}.ogg`)
+        })
     }
 
     componentDidUpdate() {
@@ -335,7 +355,8 @@ class Main extends React.Component {
     }
     
     renderMain() {
-        /*return <main><Ending/></main>*/
+        if (this.isEnding)
+            return <main><Ending/></main>
         const {poke, prevPoke, nextPoke, kana, options, currentKana, wrongChoices, numNamed, hintText} = this
         const {game} = this
         const {kanaIndex, streakCounter} = this.game
@@ -403,7 +424,7 @@ class Main extends React.Component {
                 <hr/>
                 <p>Your progress is saved automatically on the device you are using.</p>
                 <div className="clearSave">
-                    <span>Named: {this.game.questionIndex}</span> <button className="btn btn-warning" onClick={this.game.clearSave}>Clear Save</button>
+                    <span>Named: {this.game.questionIndex}</span> <button className="btn btn-warning" onClick={this.game.clearSave}>{this.isEnding ? "New Game" : "Clear Save"}</button>
                 </div>
             </section>
             <hr/>
