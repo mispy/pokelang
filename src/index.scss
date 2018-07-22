@@ -136,7 +136,7 @@ main {
 	display: flex;
 	align-items: center;
 	height: 100%;
-	overflow: hidden;
+	overflow-x: hidden;
 }
 
 .runway {
@@ -242,7 +242,7 @@ main {
 }
 
 .hint {
-	height: 25vh;
+	height: 20vh;
 	overflow-y: auto;
 	margin-top: 0.8rem;
 	color: #999;
