@@ -174,20 +174,27 @@ main {
 	position: relative;
 }
 
+
 .kana:not(.current) {
 	opacity: 0.3;
 }
 
-.kana.current::after {
-	content: "^";
+.kana > .answer {
 	position: absolute;
 	left: 50%;
 	transform:translate(-50%, 60%);
 }
 
-.options {
-	margin-top: 1rem;
+/*.kana.current::after {
+	content: "^";
+	font-size: 0.8em;
+	color: #666;
+	position: absolute;
+	left: 50%;
+	transform:translate(-50%, 90%);
+}*/
 
+.options {
 	.romaji {
 		display: inline-block;
 		margin-top: 5px;
@@ -197,6 +204,11 @@ main {
 	.romaji:nth-child(3)::after {
 		content: "\A";
 	}	
+
+	.romaji > span {
+		font-size: 0.8em;
+		color: #ddd;
+	}
 }
 
 

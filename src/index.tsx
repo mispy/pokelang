@@ -198,6 +198,7 @@ class Main extends React.Component {
     game: GameState = new GameState()
     @observable showMenu: boolean = false
     @observable isMobile: boolean = false
+    @observable isTransition: boolean = false
     pokeDiv: HTMLDivElement
     pokeCry: HTMLAudioElement
 
@@ -234,7 +235,7 @@ class Main extends React.Component {
             return this.game.kanaMode
     }
 
-    @computed get japanese(): string {
+    @computed get japaneseName(): string {
         const katakana = pokenames.ja[this.poke-1]
         if (!katakana) return ""
 
@@ -246,7 +247,7 @@ class Main extends React.Component {
     }
 
     @computed get kana(): string[] {
-        return splitKana(this.japanese)
+        return splitKana(this.japaneseName)
     }
 
     @computed get currentKana(): string {
@@ -270,6 +271,8 @@ class Main extends React.Component {
     }
 
     @computed get hintText(): string|undefined {
+        if (this.isTransition) return undefined
+
         if (!this.game.charactersSeen[this.currentKana])
             return `New ${this.questionKanaMode}: ${this.currentKana} ${wanakana.toRomaji(this.currentKana)}`
         else if (this.wrongChoices.length)
@@ -303,10 +306,14 @@ class Main extends React.Component {
     @action.bound onComplete() {
         this.pokeCry.volume = 0.05
         this.pokeCry.play()
+        this.isTransition = true
+        setTimeout(this.finishTransition, 1000)
+    }
 
+    @action.bound finishTransition() {
+        this.isTransition = false
         this.game.questionIndex += 1
         this.game.kanaIndex = 0
-
     }
 
     @action.bound onResize() {
@@ -361,7 +368,7 @@ class Main extends React.Component {
         const {game} = this
         const {kanaIndex, streakCounter} = this.game
 
-        return <main>
+        return <main className={this.isTransition ? "questionTransition" : undefined}>
             <div className="container text-center">
                 <div className="runway">
                     <Pokemon number={poke} key={game.questionIndex} shakeCount={wrongChoices.length}/>
@@ -370,12 +377,18 @@ class Main extends React.Component {
                     {nextPoke && <Pokemon number={nextPoke} key={`next-${game.questionIndex}`} hidden={true}/>}
                     {nextPoke && <PokemonPreloader poke={nextPoke}/>}
                 </div>
-                <div className="pokename">{kana.map((k, i) => 
-                    <span className={`kana${i === kanaIndex ? " current" : ""}`}>{k}</span>
-                )}</div>
-                <div className="options">
+                {!this.isTransition && <div className="pokename">{kana.map((k, i) => 
+                    <span className={`kana${i === kanaIndex ? " current" : ""}`}>
+                        {k}
+                        {i < kanaIndex && <span className="answer">{wanakana.toRomaji(k)}</span>}
+                    </span>
+                )}<br/>&nbsp;</div>}
+                {this.isTransition && <div className="pokename text-success">
+                    <div>{this.japaneseName}<br/>{wanakana.toRomaji(this.japaneseName)}</div>
+                </div>}
+                <div className={`options${this.isTransition ? " hidden" : ""}`}>
                     {options.map((option, i) => 
-                        <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} disabled={_.includes(wrongChoices, option)}>{i+1}. {option}</button>
+                        <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} disabled={_.includes(wrongChoices, option)}><span>{i+1} </span>{option}</button>
                     )}
                 </div>
                 <div className="stats">
