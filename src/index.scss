@@ -167,18 +167,37 @@ main {
 	animation: walkinAnim forwards 0.8s linear, walkStep 0.2s infinite, shake 0.5s;
 }
 
-.romaji {
-	margin-top: 5px;
-	margin-right: 0.5rem;
-}
-
 .kana {
 	transition: opacity 0.1s ease-out;
+	margin-right: 0.5rem;
+	position: relative;
 }
 
 .kana:not(.current) {
 	opacity: 0.3;
 }
+
+.kana.current::after {
+	content: "^";
+	position: absolute;
+	left: 50%;
+	transform:translate(-50%, 60%);
+}
+
+.options {
+	margin-top: 1rem;
+
+	.romaji {
+		display: inline-block;
+		margin-top: 5px;
+		margin-right: 0.7rem;
+	}
+	
+	.romaji:nth-child(3)::after {
+		content: "\A";
+	}	
+}
+
 
 .hidden {
 	opacity: 0;

@@ -13,6 +13,10 @@ declare const window: any
 window.wanakana = wanakana
 window.pokenames = pokenames
 
+const MNEMONICS = {
+    "ん": "looks just like the English alphabet '<b>n</b>'"
+}
+
 const MAX_POKEMON = 493
 
 function toggleAnimClass(el: HTMLElement, klass: string) {
@@ -150,7 +154,7 @@ class Ending extends React.Component {
         const bbox = getFauxBBox(path)
 
         const bounds = (this.base.parentNode as any).getBoundingClientRect()
-        const scale = Math.min(bounds.width/bbox.width, bounds.height/bbox.height)
+        const scale = Math.min(bounds.width/bbox.width, bounds.height/bbox.height)*0.9
 
         this.base.style['width'] = `${bbox.width*scale}px`
         this.base.style['height'] = `${bbox.height*scale}px`
@@ -175,7 +179,6 @@ class Ending extends React.Component {
             {_.range(0, 50).map(i => {
                 return <img style={{ position: 'absolute', left: 0, top: 0}} src="../overworld/right/135.png"/>
             })}
-            <div>Fin</div>
         </div>
     }
 }
@@ -213,11 +216,18 @@ class Main extends React.Component {
         return this.pokeList[this.pokeIndex+1]
     }
 
+    @computed get questionKanaMode() {
+        if (this.game.kanaMode === 'both')
+            return (Math.random() > 0.5 ? "hiragana" : "katakana")
+        else
+            return this.game.kanaMode
+    }
+
     @computed get japanese(): string {
         const katakana = pokenames.ja[this.poke-1]
 
         // TODO fix extends in hiragana
-        if (this.game.kanaMode === 'hiragana' || (this.game.kanaMode === 'both' && Math.random() > 0.5))
+        if (this.questionKanaMode === "hiragana")
             return wanakana.toHiragana(katakana)
         else
             return katakana
@@ -240,7 +250,7 @@ class Main extends React.Component {
     }
 
     @computed get options(): string[] {
-        return _.shuffle(_.sampleSize(this.optionSet, 3).concat([this.correctOption]))
+        return _.sortBy(_.sampleSize(this.optionSet, 3).concat([this.correctOption]))
     }
 
     @computed get numNamed(): number {
@@ -249,7 +259,7 @@ class Main extends React.Component {
 
     @computed get hintText(): string|undefined {
         if (!this.game.charactersSeen[this.currentKana])
-            return `New kana: ${this.currentKana} ${wanakana.toRomaji(this.currentKana)}`
+            return `New ${this.questionKanaMode}: ${this.currentKana} ${wanakana.toRomaji(this.currentKana)}`
         else if (this.wrongChoices.length)
             return `Hint: ${this.currentKana} ${wanakana.toRomaji(this.currentKana)}`
         else
@@ -282,10 +292,20 @@ class Main extends React.Component {
 
         this.game.questionIndex += 1
         this.game.kanaIndex = 0
+
     }
 
     @action.bound onResize() {
         this.isMobile = window.innerWidth < 700
+    }
+
+    // It's a bit slower to click on things than to tap them, so for
+    // PC we also support keyboard input
+    @action.bound onKeydown(e: KeyboardEvent) {
+        const num = parseInt(e.key)
+        if (!isNaN(num) && num > 0 && num <= this.options.length) {
+            this.chooseOption(this.options[num-1])
+        }
     }
 
     dispose: IReactionDisposer
@@ -294,8 +314,19 @@ class Main extends React.Component {
         window.addEventListener("resize", this.onResize)
         window.game = this.game
 
+        window.addEventListener("keydown", this.onKeydown)
+
         this.game.load()
         this.dispose = autorun(() => this.game.save())
+
+        this.componentDidUpdate()
+    }
+
+    componentDidUpdate() {
+        if (wanakana.toRomaji(this.currentKana) === this.currentKana) {
+            // Skip things that are not really kana, like ♂
+            this.chooseOption(this.correctOption)
+        }        
     }
 
     componentWillUnmount() {
@@ -304,7 +335,7 @@ class Main extends React.Component {
     }
     
     renderMain() {
-        //return <main><Ending/></main>
+        /*return <main><Ending/></main>*/
         const {poke, prevPoke, nextPoke, kana, options, currentKana, wrongChoices, numNamed, hintText} = this
         const {game} = this
         const {kanaIndex, streakCounter} = this.game
@@ -318,12 +349,14 @@ class Main extends React.Component {
                     {nextPoke && <Pokemon number={nextPoke} key={`next-${game.questionIndex}`} hidden={true}/>}
                     {nextPoke && <PokemonPreloader poke={nextPoke}/>}
                 </div>
-                <div>{kana.map((k, i) => 
+                <div className="pokename">{kana.map((k, i) => 
                     <span className={`kana${i === kanaIndex ? " current" : ""}`}>{k}</span>
                 )}</div>
-                {options.map((option, i) => 
-                    <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} disabled={_.includes(wrongChoices, option)}>{option}</button>
-                )}
+                <div className="options">
+                    {options.map((option, i) => 
+                        <button className="btn btn-light text-secondary romaji" onClick={e => this.chooseOption(option)} disabled={_.includes(wrongChoices, option)}>{i+1}. {option}</button>
+                    )}
+                </div>
                 <div className="stats">
                     <div className={numNamed < 1 ? 'hidden' : ''}>
                         <div>{numNamed} named</div>
@@ -334,7 +367,7 @@ class Main extends React.Component {
                         <div>Best: {game.bestStreak}</div>
                     </div>
                 </div>
-                {<p className="hint">{hintText}</p>}
+                <p className="hint">{hintText}</p>
             </div>
         </main>
     }
@@ -344,7 +377,7 @@ class Main extends React.Component {
         return <div className="menu">
             <section className="description">
                 <h1>Kanajolt</h1>
-                <p>Jolteon and his Pokémon friends are traveling the world to learn new languages. Can you help them to read their Japanese names?</p>
+                <p>Jolteon and his Pokémon friends are traveling the world to learn new languages. Can you help them to read their Japanese names by learning each of the characters?</p>
             </section>
             <hr/>
             <section className="settings">
