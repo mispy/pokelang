@@ -232,7 +232,7 @@ class Main extends React.Component {
         return this.pokeList[this.pokeIndex+1]
     }
 
-    @computed get questionKanaMode() {
+    get questionKanaMode() {
         if (this.game.kanaMode === 'both')
             return (Math.random() > 0.5 ? "hiragana" : "katakana")
         else
