@@ -40,7 +40,7 @@
     "html-loader": "^0.4.5",
     "less": "^2.7.2",
     "less-loader": "^2.2.3",
-    "lodash": "^4.17.4",
+    "lodash": "^4.17.19",
     "markdown-it": "^8.3.0",
     "markdown-it-front-matter-loader": "^0.0.7",
     "mobx": "^3.1.0",
