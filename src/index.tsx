@@ -474,7 +474,7 @@ class Main extends React.Component {
             </section>
             <hr/>
             <section className="about">
-                <small>Created by <a href="https://mispy.me">Jaiden Mispy</a>. Dedicated to my trusty travel companion, <a href="/fizz.jpg">Fission the Jolteon</a>.</small><br/>
+                <small>Created by <a href="https://mispy.me">Jaiden Mica</a>. Dedicated to my trusty travel companion, <a href="/fizz.jpg">Fission the Jolteon</a>.</small><br/>
                 <hr/>
                 <small><a href="https://github.com/mispy/kanajolt">https://github.com/mispy/kanajolt</a></small>
             </section>
